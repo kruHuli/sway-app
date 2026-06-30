@@ -110,8 +110,26 @@ async function enrichAll(studies) {
   }
 }
 
+// One row per study in the flat `studies` table. Twin of studyToRow() in index.html.
+function studyToRow(s, cityKey) {
+  const id = s.protocolSection.identificationModule || {};
+  const { _enriched, ...raw } = s;
+  const { aiSummary, ...details } = _enriched || {};
+  return {
+    nct_id:     id.nctId,
+    city_key:   cityKey,
+    title:      id.briefTitle || null,
+    ai_summary: aiSummary || null,
+    details,
+    raw,
+    fetched_at: new Date().toISOString(),
+  };
+}
+
 async function upsert(name, lat, lon, studies) {
-  const r = await fetch(`${SUPABASE_URL}/rest/v1/city_studies`, {
+  const cityKey = `${lat.toFixed(2)},${lon.toFixed(2)}`;
+  const rows = studies.map(s => studyToRow(s, cityKey)).filter(r => r.nct_id);
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/studies?on_conflict=city_key,nct_id`, {
     method: 'POST',
     headers: {
       'apikey': SUPABASE_ANON_KEY,
@@ -119,12 +137,7 @@ async function upsert(name, lat, lon, studies) {
       'Content-Type': 'application/json',
       'Prefer': 'resolution=merge-duplicates',
     },
-    body: JSON.stringify({
-      city_key:   `${lat.toFixed(2)},${lon.toFixed(2)}`,
-      city_name:  name,
-      studies,
-      fetched_at: new Date().toISOString(),
-    }),
+    body: JSON.stringify(rows),
   });
   if (!r.ok) throw new Error(`Supabase error ${r.status}: ${await r.text()}`);
 }
