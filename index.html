@@ -491,7 +491,7 @@ function buildCard(study, rank) {
           <div class="scard-dist">${esc(distStr)}</div>
         </div>
         <div class="scard-title">${esc(title)}</div>
-        <div class="scard-desc">${esc(enr.aiSummary || summary.slice(0, 220))}</div>
+        <div class="scard-desc">${esc(enr.aiSummary || (s => s.length < 200 ? s : s.slice(0, s.lastIndexOf(' ', 180)) + '…')(summary))}</div>
         ${tags.length ? `<div class="tag-row">${tags.slice(0,4).map(t=>`<span class="tag-pill" style="${pillStyle}">${esc(t)}</span>`).join('')}</div>` : ''}
         <div class="scard-stats">
           <div class="sstat"><span class="sstat-label">Duration</span><span class="sstat-value">${esc(duration || '?')}</span></div>

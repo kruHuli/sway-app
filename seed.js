@@ -53,7 +53,7 @@ Return JSON with exactly these keys:
 - duration: total study length as a short string (e.g. "6 weeks", "3 months") or null
 - category: exactly one of: BEHAVIORAL, DRUG, BIOLOGICAL, DEVICE, DIETARY_SUPPLEMENT, PROCEDURE, GENETIC, OTHER
 - tags: array of 3-5 brief plain-English prerequisite strings a healthy volunteer would care about (e.g. ["Age 18–65", "Non-smoker", "BMI 18–30", "No medications"])
-- aiSummary: 2–3 sentences at a 10th grade reading level. Say what you'll actually do (take a pill, answer surveys, get a blood draw, etc.) and why it matters. Short sentences. No jargon. Sound like a friend explaining it, not a doctor.`;
+- aiSummary: REQUIRED, never null. 2–3 sentences at a 10th grade reading level. Say what you'll actually do (take a supplement, answer surveys, get a blood draw, etc.) and why it matters. Short sentences. No jargon. Sound like a friend explaining it, not a doctor. If the study is complex, just describe the basics simply.`;
 
   try {
     const res = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -65,7 +65,7 @@ Return JSON with exactly these keys:
           { role: 'system', content: 'You are a research coordinator explaining clinical studies to regular people. Write at a 10th grade reading level — short sentences, everyday words, zero jargon. Return only valid JSON.' },
           { role: 'user', content: prompt },
         ],
-        max_tokens: 320, temperature: 0.3,
+        max_tokens: 450, temperature: 0.3,
         response_format: { type: 'json_object' },
       }),
     });
