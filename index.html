@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Sway — Research Near You</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <style>
+    :root {
+      --bg: #0d0f18;
+      --card-bg: #161824;
+      --accent: #7c6ff7;
+      --green: #22c55e;
+      --red: #ef4444;
+      --text: #f0f0f5;
+      --sub: #8b8fa8;
+      --border: rgba(255,255,255,0.07);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    html, body { height: 100%; overflow: hidden; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); }
+
+    /* ── screens ── */
+    .screen { position: fixed; inset: 0; display: flex; flex-direction: column; }
+    .hidden { display: none !important; }
+
+    /* ─────────── LANDING ─────────── */
+    #landing {
+      background: radial-gradient(ellipse at 50% 0%, #2a1f6e 0%, #0d0f18 65%);
+      align-items: center; justify-content: center;
+      padding: 2rem 1.75rem; text-align: center; gap: 0;
+    }
+    .logo { font-size: 2.6rem; font-weight: 900; letter-spacing: -0.04em; color: #fff; line-height: 1; }
+    .logo em { color: var(--accent); font-style: normal; }
+    .logo-sub { font-size: 0.78rem; font-weight: 500; letter-spacing: 0.18em; text-transform: uppercase; color: var(--sub); margin-top: 0.3rem; margin-bottom: 2.5rem; }
+    .pitch { font-size: 1.5rem; font-weight: 800; line-height: 1.35; color: #fff; margin-bottom: 0.75rem; }
+    .pitch-body { font-size: 0.88rem; color: var(--sub); line-height: 1.7; margin-bottom: 2.25rem; max-width: 320px; }
+    .loc-wrap { width: 100%; max-width: 340px; }
+    .btn-geo {
+      width: 100%; padding: 0.85rem 1rem;
+      background: rgba(124,111,247,0.12); border: 1.5px solid rgba(124,111,247,0.3);
+      border-radius: 12px; color: var(--accent); font-size: 0.9rem; font-weight: 600;
+      cursor: pointer; margin-bottom: 0.6rem;
+    }
+    .btn-geo:active { background: rgba(124,111,247,0.2); }
+    .loc-divider { display: flex; align-items: center; gap: 0.75rem; margin: 0.2rem 0 0.6rem; color: var(--sub); font-size: 0.75rem; }
+    .loc-divider::before, .loc-divider::after { content:''; flex:1; height:1px; background: var(--border); }
+    .loc-input {
+      width: 100%; padding: 0.85rem 1rem;
+      background: rgba(255,255,255,0.05); border: 1.5px solid var(--border);
+      border-radius: 12px; color: var(--text); font-size: 0.9rem;
+      margin-bottom: 0.85rem;
+    }
+    .loc-input::placeholder { color: var(--sub); }
+    .loc-input:focus { outline: none; border-color: var(--accent); }
+    .btn-cta {
+      width: 100%; padding: 1rem;
+      background: var(--accent); border: none; border-radius: 12px;
+      color: #fff; font-size: 1rem; font-weight: 700; cursor: pointer;
+    }
+    .btn-cta:active { background: #6a5ee0; }
+    .btn-cta:disabled { opacity: 0.45; cursor: wait; }
+    .trust-note { margin-top: 1.5rem; font-size: 0.7rem; color: var(--sub); line-height: 1.6; }
+
+    /* ─────────── SWIPE SCREEN ─────────── */
+    #swipe-screen { background: var(--bg); }
+
+    .swipe-topbar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0.9rem 1.25rem 0; flex-shrink: 0;
+    }
+    .swipe-logo { font-size: 1.15rem; font-weight: 900; letter-spacing: -0.03em; }
+    .swipe-logo em { color: var(--accent); font-style: normal; }
+    .card-area { flex: 1; position: relative; padding: 0.75rem 1rem 0.5rem; min-height: 0; }
+    .card-stack { position: absolute; inset: 0.75rem 1rem 0.5rem; }
+
+    /* swipe cards */
+    .scard {
+      position: absolute; inset: 0;
+      border-radius: 22px; overflow: hidden;
+      touch-action: none; user-select: none;
+      transform-origin: center 110%;
+      will-change: transform;
+    }
+    .scard.is-top  { z-index: 10; cursor: grab; }
+    .scard.is-top:active { cursor: grabbing; }
+    .scard.is-next  { z-index: 9;  transform: scale(0.94) translateY(14px); pointer-events: none; }
+    .scard.is-third { z-index: 8;  transform: scale(0.88) translateY(28px); pointer-events: none; }
+    .scard.snap-back { transition: transform 0.35s cubic-bezier(0.175,0.885,0.32,1.275); }
+    .scard.fly-out  { transition: transform 0.32s ease-in, opacity 0.32s ease-in; pointer-events: none; }
+    .scard.promote  { transition: transform 0.3s ease-out; }
+
+    .scard-inner { background: var(--card-bg); border-radius: 22px; height: 100%; display: flex; flex-direction: column; overflow: hidden; }
+
+    .scard-hero {
+      height: 33%; flex-shrink: 0;
+      position: relative; display: flex; align-items: flex-end; padding: 0.7rem 0.9rem;
+    }
+    .scard-hero-top { position: absolute; top: 0.6rem; right: 0.7rem; }
+    .phase-badge { font-size: 0.59rem; font-weight: 700; background: rgba(0,0,0,0.4); padding: 0.18rem 0.5rem; border-radius: 20px; color: rgba(255,255,255,0.75); }
+    .scard-cat {
+      font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em;
+      background: rgba(0,0,0,0.45); backdrop-filter: blur(6px);
+      padding: 0.22rem 0.55rem; border-radius: 20px;
+    }
+    .ov-match, .ov-skip {
+      position: absolute; top: 1rem;
+      padding: 0.3rem 0.75rem; border-radius: 8px;
+      font-size: 1rem; font-weight: 900; letter-spacing: 0.06em;
+      opacity: 0; pointer-events: none; border: 2.5px solid;
+    }
+    .ov-match { left: 1rem; color: var(--green); border-color: var(--green); transform: rotate(-14deg); }
+    .ov-skip  { right: 1rem; color: var(--red);   border-color: var(--red);   transform: rotate(14deg); }
+
+    .scard-body { flex: 1; padding: 0.75rem 0.9rem 0.7rem; display: flex; flex-direction: column; gap: 0.35rem; min-height: 0; }
+    .scard-head-row { display: flex; align-items: center; justify-content: space-between; gap: 0.4rem; }
+    .scard-inst { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: var(--sub); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .scard-dist { font-size: 0.68rem; font-weight: 700; color: var(--sub); flex-shrink: 0; }
+    .scard-title { font-size: 0.92rem; font-weight: 700; line-height: 1.3; color: #fff; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .tag-row { display: flex; gap: 0.28rem; flex-wrap: wrap; flex-shrink: 0; }
+    .tag-pill { font-size: 0.61rem; font-weight: 700; letter-spacing: 0.03em; padding: 0.17rem 0.48rem; border-radius: 20px; white-space: nowrap; }
+    .scard-stats { display: flex; gap: 0.35rem; flex-shrink: 0; }
+    .sstat { flex: 1; background: rgba(255,255,255,0.05); border-radius: 10px; padding: 0.42rem 0.3rem; text-align: center; }
+    .sstat-label { display: block; font-size: 0.55rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--sub); }
+    .sstat-value { display: block; font-size: 0.78rem; font-weight: 700; margin-top: 0.08rem; }
+    .sv-green { color: var(--green); }
+
+    /* action buttons */
+    .action-row {
+      display: flex; align-items: center; justify-content: center;
+      gap: 1.1rem; padding: 0.85rem 1rem 1.5rem; flex-shrink: 0;
+    }
+    .abtn {
+      border-radius: 50%; border: 2px solid; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.2rem; transition: transform 0.1s;
+    }
+    .abtn:active { transform: scale(0.88); }
+    .abtn-skip  { width: 54px; height: 54px; background: rgba(239,68,68,0.1);  border-color: rgba(239,68,68,0.25);  color: var(--red); }
+    .abtn-like  { width: 66px; height: 66px; background: rgba(34,197,94,0.1);  border-color: rgba(34,197,94,0.25);  color: var(--green); font-size: 1.4rem; }
+    .abtn-info  { width: 54px; height: 54px; background: rgba(255,255,255,0.05); border-color: var(--border); color: var(--sub); }
+
+    /* city chips */
+    .city-chips { display: flex; gap: 0.35rem; flex-wrap: wrap; justify-content: center; margin-bottom: 0.85rem; }
+    .city-chip { padding: 0.32rem 0.75rem; background: rgba(255,255,255,0.06); border: 1px solid var(--border); border-radius: 20px; color: var(--sub); font-size: 0.76rem; font-weight: 600; cursor: pointer; white-space: nowrap; }
+    .city-chip:active { background: rgba(124,111,247,0.15); color: var(--accent); }
+    .swipe-loc { font-size: 0.72rem; color: var(--sub); font-weight: 500; }
+
+    /* AI loading dots */
+    .ai-dots { display: flex; gap: 5px; padding: 0.5rem 0; }
+    .ai-dots span { width: 6px; height: 6px; border-radius: 50%; background: var(--sub); animation: pulse 1.2s ease-in-out infinite; }
+    .ai-dots span:nth-child(2) { animation-delay: 0.2s; }
+    .ai-dots span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes pulse { 0%,80%,100% { opacity: 0.25; } 40% { opacity: 1; } }
+
+    /* loading */
+    .load-state { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1rem; color: var(--sub); font-size: 0.88rem; }
+    .spinner { width: 30px; height: 30px; border: 2.5px solid rgba(255,255,255,0.07); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ─────────── SHEETS ─────────── */
+    #dim { position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 50; opacity: 0; pointer-events: none; transition: opacity 0.25s; }
+    #dim.show { opacity: 1; pointer-events: auto; }
+
+    .sheet {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: #1c1f2e; border-radius: 24px 24px 0 0;
+      z-index: 60; padding: 0 1.5rem 2.5rem;
+      transform: translateY(105%);
+      transition: transform 0.35s cubic-bezier(0.32,0.72,0,1);
+      box-shadow: 0 -8px 40px rgba(0,0,0,0.5);
+    }
+    .sheet.open { transform: translateY(0); }
+    /* detail sheet — full screen slide up */
+    #detail-sheet {
+      position: fixed; inset: 0; background: var(--bg);
+      z-index: 70; overflow-y: auto; overscroll-behavior: contain;
+      transform: translateY(105%);
+      transition: transform 0.35s cubic-bezier(0.32,0.72,0,1);
+    }
+    #detail-sheet.open { transform: translateY(0); }
+    .detail-bar { position: sticky; top: 0; background: var(--bg); padding: 0.9rem 1.25rem 0.6rem; display: flex; align-items: center; gap: 0.75rem; z-index: 5; }
+    .btn-x { width: 34px; height: 34px; background: rgba(255,255,255,0.08); border: none; border-radius: 50%; color: #fff; font-size: 0.9rem; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+    .detail-pad { padding: 0 1.25rem 6rem; }
+    .d-hero { height: 180px; border-radius: 18px; margin-bottom: 1.25rem; }
+    .d-inst { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.09em; color: var(--sub); margin-bottom: 0.35rem; }
+    .d-title { font-size: 1.2rem; font-weight: 800; line-height: 1.35; margin-bottom: 1rem; }
+    .d-stats { display: flex; flex-wrap: wrap; gap: 0.45rem; margin-bottom: 1.25rem; }
+    .d-stat { flex: 1; min-width: 70px; background: rgba(255,255,255,0.05); border-radius: 10px; padding: 0.6rem 0.5rem; text-align: center; }
+    .d-stat-label { display: block; font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--sub); }
+    .d-stat-value { display: block; font-size: 0.88rem; font-weight: 700; margin-top: 0.1rem; }
+    .d-section { margin-bottom: 1.5rem; }
+    .d-section-title { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.09em; color: var(--sub); margin-bottom: 0.65rem; }
+    .d-body { font-size: 0.85rem; color: #c0c0d0; line-height: 1.75; }
+    .crit-item { display: flex; align-items: flex-start; gap: 0.55rem; padding: 0.28rem 0; font-size: 0.83rem; line-height: 1.5; color: #c0c0d0; }
+    .crit-dot { flex-shrink: 0; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); margin-top: 0.42rem; }
+    .crit-item.excl .crit-dot { background: var(--red); }
+    .crit-item.excl { color: #e88; }
+    .detail-cta-wrap { position: fixed; bottom: 0; left: 0; right: 0; padding: 1rem 1.25rem 1.75rem; background: linear-gradient(to top, var(--bg) 55%, transparent); z-index: 6; }
+    .btn-ctg { display: block; width: 100%; padding: 1rem; background: var(--accent); border: none; border-radius: 14px; color: #fff; font-size: 0.97rem; font-weight: 700; text-align: center; text-decoration: none; cursor: pointer; }
+
+    /* ─────────── DONE SCREEN ─────────── */
+    #done-screen {
+      background: radial-gradient(ellipse at 50% 30%, #1a1560 0%, var(--bg) 70%);
+      align-items: center; justify-content: center; padding: 2rem; text-align: center; gap: 0;
+    }
+    .done-em { font-size: 3rem; margin-bottom: 0.75rem; }
+    .done-title { font-size: 1.5rem; font-weight: 800; margin-bottom: 0.5rem; }
+    .done-sub { color: var(--sub); font-size: 0.88rem; line-height: 1.7; margin-bottom: 2rem; max-width: 300px; }
+    .btn-restart { padding: 0.9rem 2rem; background: var(--accent); border: none; border-radius: 12px; color: #fff; font-size: 0.95rem; font-weight: 700; cursor: pointer; }
+  </style>
+</head>
+<body>
+
+<!-- ── Landing ── -->
+<div class="screen" id="landing">
+  <div class="logo">sw<em>a</em>y</div>
+  <div class="logo-sub">research near you</div>
+  <div class="pitch">Your body holds answers science needs.</div>
+  <div class="pitch-body">Healthy people like you make medical breakthroughs possible. Find paid research studies near you — swipe through in seconds.</div>
+  <div class="loc-wrap">
+    <div class="city-chips">
+      <button class="city-chip" onclick="pickCity('New York')">NYC</button>
+      <button class="city-chip" onclick="pickCity('San Francisco')">SF</button>
+      <button class="city-chip" onclick="pickCity('Los Angeles')">LA</button>
+      <button class="city-chip" onclick="pickCity('Chicago')">Chicago</button>
+      <button class="city-chip" onclick="pickCity('Boston')">Boston</button>
+      <button class="city-chip" onclick="pickCity('Seattle')">Seattle</button>
+    </div>
+    <button class="btn-geo" onclick="useMyLocation()">📍 Use my location</button>
+    <div class="loc-divider">or</div>
+    <input class="loc-input" id="loc-in" type="text" placeholder="City, state or ZIP code">
+    <button class="btn-cta" id="cta-btn" onclick="startApp()">Find studies near me →</button>
+  </div>
+  <div class="trust-note">All studies registered with the U.S. National Library of Medicine<br>No account required · No personal data stored</div>
+</div>
+
+<!-- ── Swipe screen ── -->
+<div class="screen hidden" id="swipe-screen">
+  <div class="swipe-topbar">
+    <div class="swipe-logo">sw<em>a</em>y</div>
+    <div class="swipe-loc" id="swipe-loc"></div>
+  </div>
+  <div class="card-area">
+    <div class="card-stack" id="card-stack">
+      <div class="load-state"><div class="spinner"></div>Finding studies near you…</div>
+    </div>
+  </div>
+  <div class="action-row">
+    <button class="abtn abtn-skip" onclick="doSwipe('left')"  title="Skip">✕</button>
+    <button class="abtn abtn-like" onclick="doSwipe('right')" title="Interested">♥</button>
+    <button class="abtn abtn-info" onclick="openDetail()"     title="Details">ℹ</button>
+  </div>
+</div>
+
+<!-- ── Done screen ── -->
+<div class="screen hidden" id="done-screen">
+  <div class="done-em">🎉</div>
+  <div class="done-title">That's a wrap!</div>
+  <div class="done-sub" id="done-sub"></div>
+  <button class="btn-restart" onclick="resetApp()">Start over</button>
+</div>
+
+<!-- ── Dim ── -->
+<div id="dim" onclick="closeDim()"></div>
+
+<!-- ── Detail sheet ── -->
+<div id="detail-sheet">
+  <div class="detail-bar">
+    <button class="btn-x" onclick="closeDetail()">✕</button>
+    <span style="font-size:0.82rem;color:var(--sub)">Study details</span>
+  </div>
+  <div class="detail-pad" id="detail-pad"></div>
+  <div class="detail-cta-wrap">
+    <a id="detail-link" href="#" target="_blank" rel="noopener" class="btn-ctg">View on ClinicalTrials.gov →</a>
+  </div>
+</div>
+
+<script>
+const OPENAI_API_KEY   = 'YOUR_OPENAI_API_KEY';   // ponytail: replace — fine for local/demo
+const SUPABASE_URL     = 'YOUR_SUPABASE_URL';
+const SUPABASE_ANON    = 'YOUR_SUPABASE_ANON_KEY';
+const db = (SUPABASE_URL !== 'YOUR_SUPABASE_URL')
+  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON)
+  : null;
+const dbRun = q => Promise.resolve(q).catch(() => {});
+
+// Stable anonymous session ID (survives tab reloads, not tied to an account)
+const sessionId = localStorage.getItem('sway_session') || (id => (localStorage.setItem('sway_session', id), id))(crypto.randomUUID());
+
+const CITIES = {
+  'New York':      { lat: 40.7128, lon: -74.0060 },
+  'San Francisco': { lat: 37.7749, lon: -122.4194 },
+  'Los Angeles':   { lat: 34.0522, lon: -118.2437 },
+  'Chicago':       { lat: 41.8781, lon: -87.6298 },
+  'Boston':        { lat: 42.3601, lon: -71.0589 },
+  'Seattle':       { lat: 47.6062, lon: -122.3321 },
+};
+const studyCache = {};
+
+// ── Gradients per intervention type
+const GRAD = {
+  BEHAVIORAL:         'linear-gradient(140deg,#5c2d91,#1e3a6e)',
+  DRUG:               'linear-gradient(140deg,#0e4d8a,#0a2540)',
+  BIOLOGICAL:         'linear-gradient(140deg,#155e3a,#0a3060)',
+  DEVICE:             'linear-gradient(140deg,#1a2e4a,#2d1b5e)',
+  DIETARY_SUPPLEMENT: 'linear-gradient(140deg,#145a3c,#0d3320)',
+  PROCEDURE:          'linear-gradient(140deg,#3b1f6b,#0d2040)',
+  GENETIC:            'linear-gradient(140deg,#6b1f4a,#2d1060)',
+  OTHER:              'linear-gradient(140deg,#2a1f6e,#0d1540)',
+};
+const GRAD_DEFAULT = 'linear-gradient(140deg,#2a1f6e,#0d0f18)';
+
+const TAG_PILL = {
+  BEHAVIORAL:         'background:rgba(92,45,145,0.3);border:1px solid rgba(124,111,247,0.5);color:#c4b5fd',
+  DRUG:               'background:rgba(14,77,138,0.3);border:1px solid rgba(59,130,246,0.5);color:#93c5fd',
+  BIOLOGICAL:         'background:rgba(21,94,58,0.3);border:1px solid rgba(34,197,94,0.5);color:#86efac',
+  DEVICE:             'background:rgba(26,46,74,0.3);border:1px solid rgba(100,116,139,0.5);color:#94a3b8',
+  DIETARY_SUPPLEMENT: 'background:rgba(20,90,60,0.3);border:1px solid rgba(16,185,129,0.5);color:#6ee7b7',
+  PROCEDURE:          'background:rgba(59,31,107,0.3);border:1px solid rgba(139,92,246,0.5);color:#ddd6fe',
+  GENETIC:            'background:rgba(107,31,74,0.3);border:1px solid rgba(236,72,153,0.5);color:#f9a8d4',
+  OTHER:              'background:rgba(42,31,110,0.3);border:1px solid rgba(99,102,241,0.5);color:#a5b4fc',
+};
+
+const CAT_LABEL = {
+  BEHAVIORAL:'Mind & Behavior', DRUG:'Medication Study', BIOLOGICAL:'Biology Study',
+  DEVICE:'Tech & Devices', DIETARY_SUPPLEMENT:'Nutrition Study', PROCEDURE:'Clinical Procedure',
+  GENETIC:'Genetics Study', OTHER:'Research Study',
+};
+
+// ── State
+let lat = null, lon = null;
+let studies = [], idx = 0;
+let liked = [];
+
+// ── Location
+function useMyLocation() {
+  navigator.geolocation.getCurrentPosition(pos => {
+    lat = pos.coords.latitude; lon = pos.coords.longitude;
+    document.getElementById('loc-in').value = `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
+  }, () => alert('Location blocked. Type your city or ZIP instead.'));
+}
+
+async function geocode(q) {
+  const r = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1&countrycodes=us`, {
+    headers: {'User-Agent':'SwayApp/1.0'}
+  });
+  const d = await r.json();
+  if (!d.length) throw new Error(`Could not find "${q}" — try a city name or ZIP.`);
+  return [parseFloat(d[0].lat), parseFloat(d[0].lon)];
+}
+
+async function startApp() {
+  const btn = document.getElementById('cta-btn');
+  const raw = document.getElementById('loc-in').value.trim();
+  btn.disabled = true; btn.textContent = 'Looking…';
+  try {
+    if (lat && !raw) { /* already have coords */ }
+    else if (raw.match(/^-?\d+\.?\d*\s*,\s*-?\d+\.?\d*$/)) {
+      const p = raw.split(','); lat = parseFloat(p[0]); lon = parseFloat(p[1]);
+    } else if (raw) {
+      [lat, lon] = await geocode(raw);
+    } else {
+      alert('Enter a location or tap "Use my location"');
+      return;
+    }
+    document.getElementById('swipe-loc').textContent = raw || 'Near you';
+    showScreen('swipe-screen');
+    await loadStudies();
+  } catch(e) { alert(e.message); }
+  finally { btn.disabled = false; btn.textContent = 'Find studies near me →'; }
+}
+
+// ── Shared CTG fetch
+async function fetchCTGStudies(la, lo, size = 25) {
+  const p = new URLSearchParams({
+    'filter.overallStatus': 'RECRUITING',
+    'filter.geo': `distance(${la},${lo},50mi)`,
+    'aggFilters': 'healthy:y',
+    'fields': 'NCTId|BriefTitle|BriefSummary|EligibilityModule|ContactsLocationsModule|ArmsInterventionsModule|DesignModule|SponsorCollaboratorsModule',
+    'pageSize': String(size), 'format': 'json',
+  });
+  const r = await fetch(`https://clinicaltrials.gov/api/v2/studies?${p}`);
+  if (!r.ok) throw new Error(`API error ${r.status}`);
+  const d = await r.json();
+  return (d.studies || []).filter(s => s.protocolSection);
+}
+
+// ── API — healthy volunteer studies, no condition filter
+async function loadStudies() {
+  const stack = document.getElementById('card-stack');
+  const cacheKey = `${lat.toFixed(2)},${lon.toFixed(2)}`;
+  if (studyCache[cacheKey]) {
+    studies = studyCache[cacheKey]; idx = 0; renderStack(); return;
+  }
+  stack.innerHTML = '<div class="load-state"><div class="spinner"></div>Finding studies near you…</div>';
+
+  // Check Supabase for this location (custom city/GPS that wasn't prefetched)
+  if (db) {
+    try {
+      const { data } = await db.from('city_studies').select('studies,fetched_at').eq('city_key', cacheKey).single();
+      if (data?.studies && Date.now() - new Date(data.fetched_at) < 86400000) {
+        studies = data.studies; studyCache[cacheKey] = studies; idx = 0; renderStack(); return;
+      }
+    } catch {}
+  }
+
+  studies = await fetchCTGStudies(lat, lon);
+  studyCache[cacheKey] = studies;
+  if (db) dbRun(db.from('city_studies').upsert({ city_key: cacheKey, studies, fetched_at: new Date().toISOString() }));
+  idx = 0;
+  renderStack();
+}
+
+// ── Card stack rendering
+function renderStack() {
+  const stack = document.getElementById('card-stack');
+  stack.innerHTML = '';
+  if (!studies.length) {
+    stack.innerHTML = '<div class="load-state" style="color:var(--sub)">No studies found nearby.<br>Try a different location.</div>';
+    return;
+  }
+  // render back to front (0=top)
+  const count = Math.min(3, studies.length - idx);
+  for (let i = count - 1; i >= 0; i--) {
+    const el = buildCard(studies[idx + i], i);
+    stack.appendChild(el);
+  }
+  attachDrag();
+}
+
+function buildCard(study, rank) {
+  const p   = study.protocolSection;
+  const id  = p.identificationModule || {};
+  const desc = p.descriptionModule || {};
+  const cl   = p.contactsLocationsModule || {};
+  const ai   = p.armsInterventionsModule || {};
+  const sp   = p.sponsorCollaboratorsModule || {};
+  const des  = p.designModule || {};
+
+  const nctId = id.nctId || '';
+  const title = id.briefTitle || 'Research Study';
+  const summary = desc.briefSummary || '';
+  const ivType = ai.interventions?.[0]?.type || 'OTHER';
+  const gradient = GRAD[ivType] || GRAD_DEFAULT;
+  const cat = CAT_LABEL[ivType] || 'Research Study';
+  const institution = sp.leadSponsor?.name || '';
+  const phase = phaseLabel(des.phases?.[0]);
+  const tags = extractTags(study);
+  const pillStyle = TAG_PILL[ivType] || TAG_PILL.OTHER;
+
+  const locs = cl.locations || [];
+  let nearLoc = null, nearDist = Infinity;
+  locs.forEach(loc => {
+    if (loc.geoPoint) {
+      const d = hav(lat, lon, loc.geoPoint.lat, loc.geoPoint.lon);
+      if (d < nearDist) { nearDist = d; nearLoc = loc; }
+    }
+  });
+  const distStr  = nearDist < Infinity ? `${nearDist.toFixed(1)} mi` : '?';
+  const pay      = extractPay(summary);
+  const duration = extractTime(des, summary);
+
+  const el = document.createElement('div');
+  el.className = `scard ${['is-top','is-next','is-third'][rank]}`;
+  el.dataset.nctId = nctId;
+  el.dataset.studyIdx = idx + rank;
+  el.dataset.dist = distStr;
+  el.dataset.loc = nearLoc ? [nearLoc.city, nearLoc.state].filter(Boolean).join(', ') : '';
+
+  el.innerHTML = `
+    <div class="scard-inner">
+      <div class="scard-hero" style="background:${gradient}">
+        <div class="scard-hero-top">${phase ? `<span class="phase-badge">${esc(phase)}</span>` : ''}</div>
+        <span class="scard-cat">${esc(cat)}</span>
+        <div class="ov-match">MATCH ✓</div>
+        <div class="ov-skip">SKIP ✗</div>
+      </div>
+      <div class="scard-body">
+        <div class="scard-head-row">
+          <div class="scard-inst">${esc(institution)}</div>
+          <div class="scard-dist">${esc(distStr)}</div>
+        </div>
+        <div class="scard-title">${esc(title)}</div>
+        ${tags.length ? `<div class="tag-row">${tags.slice(0,4).map(t=>`<span class="tag-pill" style="${pillStyle}">${esc(t)}</span>`).join('')}</div>` : ''}
+        <div class="scard-stats">
+          <div class="sstat"><span class="sstat-label">Duration</span><span class="sstat-value">${esc(duration || '?')}</span></div>
+          <div class="sstat"><span class="sstat-label">Pay</span><span class="sstat-value ${pay ? 'sv-green' : ''}">${pay ? esc(pay) : '—'}</span></div>
+          <div class="sstat"><span class="sstat-label">Phase</span><span class="sstat-value">${esc(phase || '—')}</span></div>
+        </div>
+      </div>
+    </div>`;
+  return el;
+}
+
+// ── Drag
+let drag = null, sx = 0, sy = 0, cx = 0;
+
+function attachDrag() {
+  const top = document.querySelector('.scard.is-top');
+  if (!top) return;
+  drag = top;
+  top.addEventListener('mousedown', onDown);
+  top.addEventListener('touchstart', onDown, {passive: true});
+}
+
+function onDown(e) {
+  const pt = e.touches?.[0] ?? e;
+  sx = pt.clientX; sy = pt.clientY; cx = 0;
+  drag.classList.remove('snap-back','fly-out','promote');
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('mouseup', onUp);
+  document.addEventListener('touchmove', onMove, {passive: false});
+  document.addEventListener('touchend', onUp);
+}
+
+function onMove(e) {
+  if (!drag) return;
+  if (e.cancelable) e.preventDefault();
+  const pt = e.touches?.[0] ?? e;
+  cx = pt.clientX - sx;
+  const cy = (pt.clientY - sy) * 0.25;
+  drag.style.transform = `translate(${cx}px,${cy}px) rotate(${cx * 0.07}deg)`;
+  const pct = Math.min(Math.abs(cx) / 90, 1);
+  drag.querySelector('.ov-match').style.opacity = cx > 0 ? pct : 0;
+  drag.querySelector('.ov-skip').style.opacity  = cx < 0 ? pct : 0;
+}
+
+function onUp() {
+  document.removeEventListener('mousemove', onMove);
+  document.removeEventListener('mouseup', onUp);
+  document.removeEventListener('touchmove', onMove);
+  document.removeEventListener('touchend', onUp);
+  if (!drag) return;
+  if (Math.abs(cx) > 80) {
+    doSwipe(cx > 0 ? 'right' : 'left');
+  } else {
+    drag.classList.add('snap-back');
+    drag.style.transform = '';
+    drag.querySelector('.ov-match').style.opacity = 0;
+    drag.querySelector('.ov-skip').style.opacity  = 0;
+  }
+  drag = null;
+}
+
+function doSwipe(dir) {
+  const top = document.querySelector('.scard.is-top');
+  if (!top) return;
+  const nctId = top.dataset.nctId;
+  const sIdx  = parseInt(top.dataset.studyIdx);
+  const study = studies[sIdx];
+
+  if (dir === 'right' && study) {
+    const p   = study.protocolSection;
+    const id  = p.identificationModule || {};
+    const sp  = p.sponsorCollaboratorsModule || {};
+    const likedStudy = {
+      nctId,
+      title: id.briefTitle || 'Research Study',
+      institution: sp.leadSponsor?.name || '',
+      loc: top.dataset.loc,
+      dist: top.dataset.dist,
+    };
+    liked.push(likedStudy);
+    if (db) dbRun(db.from('liked_studies').insert({
+      session_id: sessionId, nct_id: nctId,
+      title: likedStudy.title, institution: likedStudy.institution,
+      location: likedStudy.loc, distance: likedStudy.dist,
+    }));
+    top.classList.add('fly-out');
+    top.style.transform = 'translate(160%,-5px) rotate(28deg)';
+  } else {
+    top.classList.add('fly-out');
+    top.style.transform = 'translate(-160%,-5px) rotate(-28deg)';
+  }
+
+  setTimeout(() => {
+    top.remove();
+    idx++;
+    if (idx >= studies.length) { showDone(); return; }
+
+    // promote remaining cards
+    document.querySelectorAll('.scard').forEach((c, i) => {
+      c.classList.remove('is-top','is-next','is-third','fly-out','snap-back');
+      c.classList.add(['is-top','is-next','is-third'][i] ?? 'is-third');
+      c.style.transform = '';
+      c.classList.add('promote');
+      setTimeout(() => c.classList.remove('promote'), 310);
+    });
+
+    // append new third card if available
+    if (studies.length - idx >= 3) {
+      const newCard = buildCard(studies[idx + 2], 2);
+      document.getElementById('card-stack').insertBefore(newCard, document.getElementById('card-stack').firstChild);
+    }
+
+    attachDrag();
+  }, 310);
+}
+
+// ── Detail
+function openDetail() {
+  const top = document.querySelector('.scard.is-top');
+  if (!top) return;
+  const study = studies[parseInt(top.dataset.studyIdx)];
+  if (!study) return;
+  const p    = study.protocolSection;
+  const id   = p.identificationModule || {};
+  const desc = p.descriptionModule || {};
+  const elig = p.eligibilityModule || {};
+  const cl   = p.contactsLocationsModule || {};
+  const ai   = p.armsInterventionsModule || {};
+  const sp   = p.sponsorCollaboratorsModule || {};
+  const des  = p.designModule || {};
+
+  const nctId = id.nctId || '';
+  const title = id.briefTitle || 'Research Study';
+  const summary = desc.briefSummary || '';
+  const ivType = ai.interventions?.[0]?.type || 'OTHER';
+  const institution = sp.leadSponsor?.name || '';
+  const pay = extractPay(summary);
+  const duration = extractTime(des, summary);
+
+  const locs = cl.locations || [];
+  let nearLoc = null, nearDist = Infinity;
+  locs.forEach(loc => {
+    if (loc.geoPoint) {
+      const d = hav(lat, lon, loc.geoPoint.lat, loc.geoPoint.lon);
+      if (d < nearDist) { nearDist = d; nearLoc = loc; }
+    }
+  });
+  const distStr = nearDist < Infinity ? `${nearDist.toFixed(1)} mi` : '?';
+  const locStr  = nearLoc ? [nearLoc.facility, nearLoc.city, nearLoc.state].filter(Boolean).join(', ') : '';
+
+  const { inclusion, exclusion } = parseCriteria(elig.eligibilityCriteria || '');
+  const minAge = elig.minimumAge, maxAge = elig.maximumAge, sex = elig.sex;
+
+  const tags = extractTags(study);
+  const phase = phaseLabel(des.phases?.[0]);
+  const pillStyle = TAG_PILL[ivType] || TAG_PILL.OTHER;
+
+  document.getElementById('detail-pad').innerHTML = `
+    <div class="d-hero" style="background:${GRAD[ivType]||GRAD_DEFAULT}"></div>
+    <div class="d-inst">${esc(institution)}</div>
+    <div class="d-title">${esc(title)}</div>
+    <div class="d-stats">
+      <div class="d-stat"><span class="d-stat-label">Distance</span><span class="d-stat-value">${esc(distStr)}</span></div>
+      <div class="d-stat"><span class="d-stat-label">Duration</span><span class="d-stat-value">${esc(duration||'—')}</span></div>
+      <div class="d-stat"><span class="d-stat-label">Pay</span><span class="d-stat-value" style="${pay?'color:var(--green)':''}">${pay?esc(pay):'—'}</span></div>
+      ${phase?`<div class="d-stat"><span class="d-stat-label">Phase</span><span class="d-stat-value">${esc(phase)}</span></div>`:''}
+      ${(minAge||maxAge)?`<div class="d-stat"><span class="d-stat-label">Age</span><span class="d-stat-value">${esc((minAge||'any')+'–'+(maxAge||'any'))}</span></div>`:''}
+      ${sex&&sex!=='ALL'?`<div class="d-stat"><span class="d-stat-label">Open to</span><span class="d-stat-value">${sex==='FEMALE'?'Women':'Men'}</span></div>`:''}
+    </div>
+    ${tags.length?`<div class="d-section"><div class="d-section-title">Requirements</div><div class="tag-row" style="margin-top:0.3rem">${tags.map(t=>`<span class="tag-pill" style="${pillStyle}">${esc(t)}</span>`).join('')}</div></div>`:''}
+    <div class="d-section">
+      <div class="d-section-title">What you'll do</div>
+      <div class="d-body" id="ai-body"><div class="ai-dots"><span></span><span></span><span></span></div></div>
+    </div>
+    ${locStr?`<div class="d-section"><div class="d-section-title">Location</div><div class="d-body">📍 ${esc(locStr)}</div></div>`:''}
+    ${inclusion.length?`<div class="d-section"><div class="d-section-title">You should have</div>${inclusion.slice(0,8).map(c=>`<div class="crit-item"><div class="crit-dot"></div>${esc(c)}</div>`).join('')}</div>`:''}
+    ${exclusion.length?`<div class="d-section"><div class="d-section-title">You cannot have</div>${exclusion.slice(0,6).map(c=>`<div class="crit-item excl"><div class="crit-dot"></div>${esc(c)}</div>`).join('')}</div>`:''}
+  `;
+  document.getElementById('detail-link').href = `https://clinicaltrials.gov/study/${nctId}`;
+  document.getElementById('detail-sheet').classList.add('open');
+  document.getElementById('dim').classList.add('show');
+
+  getAISummary(title, summary).then(text => {
+    const el = document.getElementById('ai-body');
+    if (el) el.textContent = text || summary.slice(0, 500);
+  }).catch(() => {
+    const el = document.getElementById('ai-body');
+    if (el) el.textContent = summary.slice(0, 500);
+  });
+}
+
+function closeDetail() {
+  document.getElementById('detail-sheet').classList.remove('open');
+  document.getElementById('dim').classList.remove('show');
+}
+
+// ── Detail close
+function closeDim() { closeDetail(); }
+
+// ── Done
+function showDone() {
+  const el = document.getElementById('done-sub');
+  el.textContent = liked.length
+    ? `You liked ${liked.length} stud${liked.length===1?'y':'ies'}. Nice work.`
+    : 'No matches this time. Come back whenever you\'re ready.';
+  showScreen('done-screen');
+}
+function resetApp() {
+  liked=[]; idx=0; studies=[];
+  showScreen('landing');
+}
+
+// ── City cache prefetch (runs on page load, fire-and-forget)
+async function prefetchCity(name) {
+  const c = CITIES[name];
+  const key = `${c.lat.toFixed(2)},${c.lon.toFixed(2)}`;
+  if (studyCache[key]) return;
+
+  // 1. Try Supabase (max 24h old)
+  if (db) {
+    try {
+      const { data } = await db.from('city_studies').select('studies,fetched_at').eq('city_key', key).single();
+      if (data?.studies && Date.now() - new Date(data.fetched_at) < 86400000) {
+        studyCache[key] = data.studies; return;
+      }
+    } catch {}
+  }
+
+  // 2. Fetch from CTG
+  try {
+    const result = await fetchCTGStudies(c.lat, c.lon, 20);
+    studyCache[key] = result;
+    // 3. Save to Supabase
+    if (db) dbRun(db.from('city_studies').upsert({ city_key: key, city_name: name, studies: result, fetched_at: new Date().toISOString() }));
+  } catch {}
+}
+function pickCity(name) {
+  const c = CITIES[name];
+  lat = c.lat; lon = c.lon;
+  document.getElementById('loc-in').value = name;
+  startApp();
+}
+
+// ── Tags
+function extractTags(study) {
+  const elig = study.protocolSection?.eligibilityModule || {};
+  const raw = (elig.eligibilityCriteria || '').toLowerCase();
+  const tags = [];
+  const minA = elig.minimumAge, maxA = elig.maximumAge;
+  if (minA || maxA) {
+    const mn = (minA||'').replace(/\s*years?\s*/i,'').trim();
+    const mx = (maxA||'').replace(/\s*years?\s*/i,'').trim();
+    tags.push(mn && mx ? `Age ${mn}–${mx}` : mn ? `Age ${mn}+` : `Under ${mx}`);
+  }
+  if (elig.sex === 'FEMALE') tags.push('Women only');
+  if (elig.sex === 'MALE') tags.push('Men only');
+  const bmi = raw.match(/bmi\D{0,20}?(\d+(?:\.\d+)?)\D{0,10}?(?:to|–|-|and)\D{0,10}?(\d+(?:\.\d+)?)/);
+  if (bmi) tags.push(`BMI ${bmi[1]}–${bmi[2]}`);
+  if (/non.?smok|no smok|never smok/.test(raw)) tags.push('Non-smoker');
+  if (/no.*medic|medication.free|not.*taking.*medic/.test(raw)) tags.push('Med-free');
+  if (/\bfmri\b/.test(raw)) tags.push('fMRI');
+  else if (/\bmri\b/.test(raw)) tags.push('MRI');
+  if (/blood draw|venipuncture/.test(raw)) tags.push('Blood draw');
+  if (/no alcohol|abstain.*alcohol/.test(raw)) tags.push('No alcohol');
+  if (/english.{0,15}speak|speak.{0,15}english/.test(raw)) tags.push('English');
+  return tags;
+}
+
+function phaseLabel(p) {
+  return { PHASE1:'Phase 1', PHASE2:'Phase 2', PHASE3:'Phase 3', PHASE4:'Phase 4', NA:'Observational', EARLY_PHASE1:'Early Phase 1' }[p] || null;
+}
+
+// ── OpenAI plain-language summary
+async function getAISummary(title, summary) {
+  if (!summary) return summary;
+  if (OPENAI_API_KEY === 'YOUR_OPENAI_API_KEY') return summary.slice(0, 500);
+  try {
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${OPENAI_API_KEY}` },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: "Summarize this research study for a healthy volunteer in 2–3 plain English sentences. Say what they'll actually do and why it matters. No jargon. Be warm and direct." },
+          { role: 'user', content: `Title: ${title}\n\n${summary.slice(0, 1000)}` }
+        ],
+        max_tokens: 130, temperature: 0.7,
+      }),
+    });
+    const d = await res.json();
+    return d.choices?.[0]?.message?.content?.trim() || summary.slice(0, 500);
+  } catch { return summary.slice(0, 500); }
+}
+
+// ── Utilities
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
+  document.getElementById(id).classList.remove('hidden');
+}
+function extractPay(text) {
+  const ctx = text.match(/(?:compensat|reimburse|stipend|paid|payment).{0,80}(\$[\d,]+)/i);
+  if (ctx) return `~${ctx[1]}`;
+  const rev = text.match(/(\$[\d,]+).{0,50}(?:particip|compens|reimburse)/i);
+  if (rev) return rev[1];
+  if (/\bcompensated\b|\breimbursed\b|\bstipend\b/i.test(text)) return 'Paid';
+  return null;
+}
+function extractTime(des, text) {
+  if (des.targetDuration) return des.targetDuration;
+  const m = text.match(/\b(\d+)[- ]?(week|month|year|day)s?\b/i);
+  return m ? `~${m[1]} ${m[2]}${+m[1]!==1?'s':''}` : null;
+}
+function parseCriteria(text) {
+  const clean = s => s.split(/\r?\n/)
+    .map(l => l.replace(/^[\s\-\*\d\.•·]+/,'').trim())
+    .filter(l => l.length>8 && l.length<280 && !/^(inclusion|exclusion)\s+criteria/i.test(l));
+  const iI = text.search(/inclusion criteria/i), eI = text.search(/exclusion criteria/i);
+  let inc='', exc='';
+  if (iI>-1&&eI>-1){inc=text.slice(iI,eI);exc=text.slice(eI);}
+  else if(iI>-1) inc=text.slice(iI);
+  else if(eI>-1) exc=text.slice(eI);
+  else inc=text;
+  return {inclusion:clean(inc), exclusion:clean(exc)};
+}
+function hav(la1,lo1,la2,lo2) {
+  const R=3958.8, r=x=>x*Math.PI/180;
+  const dLa=r(la2-la1), dLo=r(lo2-lo1);
+  const a=Math.sin(dLa/2)**2+Math.cos(r(la1))*Math.cos(r(la2))*Math.sin(dLo/2)**2;
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+function esc(s) {
+  return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// Prefetch popular cities in background on load
+Object.keys(CITIES).forEach(prefetchCity);
+</script>
+</body>
+</html>

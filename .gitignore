@@ -1,0 +1,4 @@
+.env
+built.html
+__pycache__/
+*.pyc

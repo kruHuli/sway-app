@@ -1,0 +1,33 @@
+[app]
+name = "sway"
+version = "0.1.0"
+description = "Tinder-style healthy volunteer research study finder"
+
+[runtime.container]
+image = "Dockerfile"
+port = 8080
+
+[routing]
+health_check = "/"
+public_paths = ["/"]
+
+[[links]]
+name = "Open Sway"
+path = "/"
+
+[resources]
+memory_mb = 256
+cpu_cores = 0.25
+
+[data]
+app_data = true
+
+[[services.v2.consumes]]
+service = "github.com/imbue-openhost/openhost/services/secrets"
+shortname = "secrets"
+version = ">=0.1.0"
+grants = [
+    {key = "OPENAI_API_KEY"},
+    {key = "SUPABASE_URL"},
+    {key = "SUPABASE_ANON_KEY"},
+]
