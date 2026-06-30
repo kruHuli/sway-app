@@ -440,6 +440,24 @@ function renderStack() {
     stack.appendChild(el);
   }
   attachDrag();
+  fillTopCardDesc();
+}
+
+// If aiSummary is missing (stale Supabase data or CTG fallback), call GPT in-browser
+function fillTopCardDesc() {
+  const top = document.querySelector('.scard.is-top');
+  if (!top) return;
+  const study = studies[parseInt(top.dataset.studyIdx)];
+  if (!study || study._enriched?.aiSummary) return;
+  const title = study.protocolSection?.identificationModule?.briefTitle || '';
+  const raw   = study.protocolSection?.descriptionModule?.briefSummary || '';
+  getAISummary(title, raw).then(text => {
+    if (!text) return;
+    if (!study._enriched) study._enriched = {};
+    study._enriched.aiSummary = text;
+    const el = top.querySelector('.scard-desc');
+    if (el) el.textContent = text;
+  }).catch(() => {});
 }
 
 function buildCard(study, rank) {
@@ -610,6 +628,7 @@ function doSwipe(dir) {
     }
 
     attachDrag();
+    fillTopCardDesc();
   }, 310);
 }
 
