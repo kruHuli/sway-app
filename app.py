@@ -41,7 +41,9 @@ def index():
     global _html_cache
     if _html_cache is None:
         _html_cache = _build_html()
-    return Response(_html_cache, mimetype="text/html")
+    r = Response(_html_cache, mimetype="text/html")
+    r.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    return r
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8080)
