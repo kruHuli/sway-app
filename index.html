@@ -403,12 +403,17 @@ async function loadStudies() {
   }
   stack.innerHTML = '<div class="load-state"><div class="spinner"></div>Finding studies near you…</div>';
 
-  // Check Supabase for this location (custom city/GPS that wasn't prefetched)
-  if (db) {
+  // Check Supabase (raw fetch with no-store so browser never caches stale enriched data)
+  if (SUPABASE_URL !== 'YOUR_SUPABASE_URL') {
     try {
-      const { data } = await db.from('city_studies').select('studies,fetched_at').eq('city_key', cacheKey).single();
-      if (data?.studies && Date.now() - new Date(data.fetched_at) < 86400000) {
-        studies = data.studies; studyCache[cacheKey] = studies; idx = 0; renderStack(); return;
+      const r = await fetch(
+        `${SUPABASE_URL}/rest/v1/city_studies?city_key=eq.${encodeURIComponent(cacheKey)}&select=studies,fetched_at`,
+        { headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${SUPABASE_ANON}` }, cache: 'no-store' }
+      );
+      const rows = await r.json();
+      const row = rows[0];
+      if (row?.studies && Date.now() - new Date(row.fetched_at) < 86400000) {
+        studies = row.studies; studyCache[cacheKey] = studies; idx = 0; renderStack(); return;
       }
     } catch {}
   }
@@ -716,12 +721,17 @@ async function prefetchCity(name) {
   const key = `${c.lat.toFixed(2)},${c.lon.toFixed(2)}`;
   if (studyCache[key]) return;
 
-  // 1. Try Supabase (max 24h old)
-  if (db) {
+  // 1. Try Supabase (raw fetch, no-store to bypass browser HTTP cache)
+  if (SUPABASE_URL !== 'YOUR_SUPABASE_URL') {
     try {
-      const { data } = await db.from('city_studies').select('studies,fetched_at').eq('city_key', key).single();
-      if (data?.studies && Date.now() - new Date(data.fetched_at) < 86400000) {
-        studyCache[key] = data.studies; return;
+      const r = await fetch(
+        `${SUPABASE_URL}/rest/v1/city_studies?city_key=eq.${encodeURIComponent(key)}&select=studies,fetched_at`,
+        { headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${SUPABASE_ANON}` }, cache: 'no-store' }
+      );
+      const rows = await r.json();
+      const row = rows[0];
+      if (row?.studies && Date.now() - new Date(row.fetched_at) < 86400000) {
+        studyCache[key] = row.studies; return;
       }
     } catch {}
   }
