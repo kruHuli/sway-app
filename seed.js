@@ -70,10 +70,33 @@ Return JSON with exactly these keys:
       }),
     });
     const d = await res.json();
-    return JSON.parse(d.choices?.[0]?.message?.content || '{}');
+    const r = JSON.parse(d.choices?.[0]?.message?.content || '{}');
+    if (!r.aiSummary) r.aiSummary = await plainSummary(id.briefTitle, desc.briefSummary);
+    return r;
   } catch (e) {
     console.warn(`  GPT failed for ${id.nctId}: ${e.message}`);
-    return {};
+    return { aiSummary: await plainSummary(id.briefTitle, desc.briefSummary) };
+  }
+}
+
+async function plainSummary(title, summary) {
+  try {
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${OPENAI_API_KEY}` },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: 'Write exactly 2 short sentences explaining what participants will do in this study. 10th grade reading level. No jargon. Start with "You will" or "Researchers want".' },
+          { role: 'user', content: `${title}\n\n${(summary || '').slice(0, 600)}` },
+        ],
+        max_tokens: 120, temperature: 0.5,
+      }),
+    });
+    const d = await res.json();
+    return d.choices?.[0]?.message?.content?.trim() || `Researchers are studying ${title}. You'll come in for visits and help scientists learn more about health.`;
+  } catch {
+    return `Researchers are studying ${title}. You'll come in for visits and help scientists learn more about health.`;
   }
 }
 
