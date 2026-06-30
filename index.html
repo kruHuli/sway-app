@@ -63,8 +63,12 @@
     .trust-note { margin-top: 1.5rem; font-size: 0.7rem; color: var(--sub); line-height: 1.6; }
 
     /* ─────────── SWIPE SCREEN ─────────── */
-    #swipe-screen { background: var(--bg); }
+    #swipe-screen { background: var(--bg); align-items: center; }
 
+    .swipe-inner {
+      display: flex; flex-direction: column;
+      width: 100%; max-width: 430px; height: 100%;
+    }
     .swipe-topbar {
       display: flex; align-items: center; justify-content: space-between;
       padding: 0.9rem 1.25rem 0; flex-shrink: 0;
@@ -173,12 +177,13 @@
     .sheet.open { transform: translateY(0); }
     /* detail sheet — full screen slide up */
     #detail-sheet {
-      position: fixed; inset: 0; background: var(--bg);
+      position: fixed; top: 0; bottom: 0; background: var(--bg);
+      left: 50%; transform: translateX(-50%) translateY(105%);
+      width: 100%; max-width: 430px;
       z-index: 70; overflow-y: auto; overscroll-behavior: contain;
-      transform: translateY(105%);
       transition: transform 0.35s cubic-bezier(0.32,0.72,0,1);
     }
-    #detail-sheet.open { transform: translateY(0); }
+    #detail-sheet.open { transform: translateX(-50%) translateY(0); }
     .detail-bar { position: sticky; top: 0; background: var(--bg); padding: 0.9rem 1.25rem 0.6rem; display: flex; align-items: center; gap: 0.75rem; z-index: 5; }
     .btn-x { width: 34px; height: 34px; background: rgba(255,255,255,0.08); border: none; border-radius: 50%; color: #fff; font-size: 0.9rem; cursor: pointer; display: flex; align-items: center; justify-content: center; }
     .detail-pad { padding: 0 1.25rem 6rem; }
@@ -237,19 +242,21 @@
 
 <!-- ── Swipe screen ── -->
 <div class="screen hidden" id="swipe-screen">
-  <div class="swipe-topbar">
-    <div class="swipe-logo">sw<em>a</em>y</div>
-    <div class="swipe-loc" id="swipe-loc"></div>
-  </div>
-  <div class="card-area">
-    <div class="card-stack" id="card-stack">
-      <div class="load-state"><div class="spinner"></div>Finding studies near you…</div>
+  <div class="swipe-inner">
+    <div class="swipe-topbar">
+      <div class="swipe-logo">sw<em>a</em>y</div>
+      <div class="swipe-loc" id="swipe-loc"></div>
     </div>
-  </div>
-  <div class="action-row">
-    <button class="abtn abtn-skip" onclick="doSwipe('left')"  title="Skip">✕</button>
-    <button class="abtn abtn-like" onclick="doSwipe('right')" title="Interested">♥</button>
-    <button class="abtn abtn-info" onclick="openDetail()"     title="Details">ℹ</button>
+    <div class="card-area">
+      <div class="card-stack" id="card-stack">
+        <div class="load-state"><div class="spinner"></div>Finding studies near you…</div>
+      </div>
+    </div>
+    <div class="action-row">
+      <button class="abtn abtn-skip" onclick="doSwipe('left')"  title="Skip">✕</button>
+      <button class="abtn abtn-like" onclick="doSwipe('right')" title="Interested">♥</button>
+      <button class="abtn abtn-info" onclick="openDetail()"     title="Details">ℹ</button>
+    </div>
   </div>
 </div>
 
