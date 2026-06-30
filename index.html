@@ -444,16 +444,17 @@ function buildCard(study, rank) {
   const ai   = p.armsInterventionsModule || {};
   const sp   = p.sponsorCollaboratorsModule || {};
   const des  = p.designModule || {};
+  const enr  = study._enriched || {};
 
   const nctId = id.nctId || '';
   const title = id.briefTitle || 'Research Study';
   const summary = desc.briefSummary || '';
-  const ivType = ai.interventions?.[0]?.type || 'OTHER';
+  const ivType = enr.category || ai.interventions?.[0]?.type || 'OTHER';
   const gradient = GRAD[ivType] || GRAD_DEFAULT;
   const cat = CAT_LABEL[ivType] || 'Research Study';
   const institution = sp.leadSponsor?.name || '';
   const phase = phaseLabel(des.phases?.[0]);
-  const tags = extractTags(study);
+  const tags = enr.tags?.length ? enr.tags : extractTags(study);
   const pillStyle = TAG_PILL[ivType] || TAG_PILL.OTHER;
 
   const locs = cl.locations || [];
@@ -465,8 +466,8 @@ function buildCard(study, rank) {
     }
   });
   const distStr  = nearDist < Infinity ? `${nearDist.toFixed(1)} mi` : '?';
-  const pay      = extractPay(summary);
-  const duration = extractTime(des, summary);
+  const pay      = enr.pay      || extractPay(summary);
+  const duration = enr.duration || extractTime(des, summary);
 
   const el = document.createElement('div');
   el.className = `scard ${['is-top','is-next','is-third'][rank]}`;
@@ -619,14 +620,15 @@ function openDetail() {
   const ai   = p.armsInterventionsModule || {};
   const sp   = p.sponsorCollaboratorsModule || {};
   const des  = p.designModule || {};
+  const enr  = study._enriched || {};
 
   const nctId = id.nctId || '';
   const title = id.briefTitle || 'Research Study';
   const summary = desc.briefSummary || '';
-  const ivType = ai.interventions?.[0]?.type || 'OTHER';
+  const ivType = enr.category || ai.interventions?.[0]?.type || 'OTHER';
   const institution = sp.leadSponsor?.name || '';
-  const pay = extractPay(summary);
-  const duration = extractTime(des, summary);
+  const pay = enr.pay || extractPay(summary);
+  const duration = enr.duration || extractTime(des, summary);
 
   const locs = cl.locations || [];
   let nearLoc = null, nearDist = Infinity;
@@ -642,7 +644,7 @@ function openDetail() {
   const { inclusion, exclusion } = parseCriteria(elig.eligibilityCriteria || '');
   const minAge = elig.minimumAge, maxAge = elig.maximumAge, sex = elig.sex;
 
-  const tags = extractTags(study);
+  const tags = enr.tags?.length ? enr.tags : extractTags(study);
   const phase = phaseLabel(des.phases?.[0]);
   const pillStyle = TAG_PILL[ivType] || TAG_PILL.OTHER;
 
@@ -671,13 +673,18 @@ function openDetail() {
   document.getElementById('detail-sheet').classList.add('open');
   document.getElementById('dim').classList.add('show');
 
-  getAISummary(title, summary).then(text => {
+  if (enr.aiSummary) {
     const el = document.getElementById('ai-body');
-    if (el) el.textContent = text || summary.slice(0, 500);
-  }).catch(() => {
-    const el = document.getElementById('ai-body');
-    if (el) el.textContent = summary.slice(0, 500);
-  });
+    if (el) el.textContent = enr.aiSummary;
+  } else {
+    getAISummary(title, summary).then(text => {
+      const el = document.getElementById('ai-body');
+      if (el) el.textContent = text || summary.slice(0, 500);
+    }).catch(() => {
+      const el = document.getElementById('ai-body');
+      if (el) el.textContent = summary.slice(0, 500);
+    });
+  }
 }
 
 function closeDetail() {
