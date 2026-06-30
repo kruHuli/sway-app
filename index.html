@@ -307,6 +307,20 @@ const CITIES = {
 };
 const studyCache = {};
 
+function lsGet(key) {
+  try {
+    const raw = localStorage.getItem(`sway_${key}`);
+    if (!raw) return null;
+    const { studies, ts } = JSON.parse(raw);
+    if (Date.now() - ts < 86400000) return studies;
+    localStorage.removeItem(`sway_${key}`);
+  } catch {}
+  return null;
+}
+function lsSet(key, data) {
+  try { localStorage.setItem(`sway_${key}`, JSON.stringify({ studies: data, ts: Date.now() })); } catch {}
+}
+
 // ── Gradients per intervention type
 const GRAD = {
   BEHAVIORAL:         'linear-gradient(140deg,#a78bfa,#7c6ff7)',
@@ -402,6 +416,10 @@ async function loadStudies() {
   if (studyCache[cacheKey]) {
     studies = studyCache[cacheKey]; idx = 0; renderStack(); return;
   }
+  const lsCached = lsGet(cacheKey);
+  if (lsCached) {
+    studies = lsCached; studyCache[cacheKey] = studies; idx = 0; renderStack(); return;
+  }
   stack.innerHTML = '<div class="load-state"><div class="spinner"></div>Finding studies near you…</div>';
 
   // Check Supabase (raw fetch with no-store so browser never caches stale enriched data)
@@ -414,13 +432,14 @@ async function loadStudies() {
       const rows = await r.json();
       const row = rows[0];
       if (row?.studies && Date.now() - new Date(row.fetched_at) < 86400000) {
-        studies = row.studies; studyCache[cacheKey] = studies; idx = 0; renderStack(); return;
+        studies = row.studies; studyCache[cacheKey] = studies; lsSet(cacheKey, studies); idx = 0; renderStack(); return;
       }
     } catch {}
   }
 
   studies = await fetchCTGStudies(lat, lon);
   studyCache[cacheKey] = studies;
+  lsSet(cacheKey, studies);
   if (db) dbRun(db.from('city_studies').upsert({ city_key: cacheKey, studies, fetched_at: new Date().toISOString() }));
   idx = 0;
   renderStack();
@@ -737,6 +756,8 @@ async function prefetchCity(name) {
   const c = CITIES[name];
   const key = `${c.lat.toFixed(2)},${c.lon.toFixed(2)}`;
   if (studyCache[key]) return;
+  const lsPre = lsGet(key);
+  if (lsPre) { studyCache[key] = lsPre; return; }
 
   // 1. Try Supabase (raw fetch, no-store to bypass browser HTTP cache)
   if (SUPABASE_URL !== 'YOUR_SUPABASE_URL') {
@@ -748,7 +769,7 @@ async function prefetchCity(name) {
       const rows = await r.json();
       const row = rows[0];
       if (row?.studies && Date.now() - new Date(row.fetched_at) < 86400000) {
-        studyCache[key] = row.studies; return;
+        studyCache[key] = row.studies; lsSet(key, row.studies); return;
       }
     } catch {}
   }
@@ -757,6 +778,7 @@ async function prefetchCity(name) {
   try {
     const result = await fetchCTGStudies(c.lat, c.lon, 20);
     studyCache[key] = result;
+    lsSet(key, result);
     // 3. Save to Supabase
     if (db) dbRun(db.from('city_studies').upsert({ city_key: key, city_name: name, studies: result, fetched_at: new Date().toISOString() }));
   } catch {}
