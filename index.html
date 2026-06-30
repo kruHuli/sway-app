@@ -705,11 +705,8 @@ function openDetail() {
   } else {
     getAISummary(title, summary).then(text => {
       const el = document.getElementById('ai-body');
-      if (el) el.textContent = text || summary.slice(0, 500);
-    }).catch(() => {
-      const el = document.getElementById('ai-body');
-      if (el) el.textContent = summary.slice(0, 500);
-    });
+      if (el) el.textContent = text;
+    }).catch(() => {});
   }
 }
 
@@ -800,9 +797,12 @@ function phaseLabel(p) {
 }
 
 // ── OpenAI plain-language summary
+// Always returns plain English — never the raw academic briefSummary.
+function plainFallback(title) {
+  return `Researchers are studying ${title || 'this topic'}. You'd come in for a few visits and help scientists learn more about health.`;
+}
 async function getAISummary(title, summary) {
-  if (!summary) return summary;
-  if (OPENAI_API_KEY === 'YOUR_OPENAI_API_KEY') return summary.slice(0, 500);
+  if (!summary || OPENAI_API_KEY === 'YOUR_OPENAI_API_KEY') return plainFallback(title);
   try {
     const res = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -817,8 +817,8 @@ async function getAISummary(title, summary) {
       }),
     });
     const d = await res.json();
-    return d.choices?.[0]?.message?.content?.trim() || summary.slice(0, 500);
-  } catch { return summary.slice(0, 500); }
+    return d.choices?.[0]?.message?.content?.trim() || plainFallback(title);
+  } catch { return plainFallback(title); }
 }
 
 // ── Utilities
