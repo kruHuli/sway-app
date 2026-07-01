@@ -49,6 +49,7 @@ Eligibility: ${(elig.eligibilityCriteria || '').slice(0, 600)}
 Interventions: ${JSON.stringify((ai.interventions || []).slice(0, 3))}
 
 Return JSON with exactly these keys:
+- plainTitle: a friendly plain-English name for this study, 8 words or fewer, sentence case. What a regular person would call it — no jargon, no acronyms, no "a study of / effects of". E.g. "Does better sleep improve memory?" or "Testing a vitamin D pill for bone health"
 - pay: compensation as a short string (e.g. "Up to $400", "~$200/visit") or null if not mentioned
 - duration: total study length as a short string (e.g. "6 weeks", "3 months") or null
 - category: exactly one of: BEHAVIORAL, DRUG, BIOLOGICAL, DEVICE, DIETARY_SUPPLEMENT, PROCEDURE, GENETIC, OTHER

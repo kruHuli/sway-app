@@ -511,7 +511,7 @@ function buildCard(study, rank) {
   const enr  = study._enriched || {};
 
   const nctId = id.nctId || '';
-  const title = id.briefTitle || 'Research Study';
+  const title = enr.plainTitle || id.briefTitle || 'Research Study';
   const summary = desc.briefSummary || '';
   const ivType = enr.category || ai.interventions?.[0]?.type || 'OTHER';
   const catColor = CAT_COLOR[ivType] || CAT_COLOR.OTHER;

@@ -65,7 +65,7 @@ create table studies (
   city_key    text not null,        -- "40.71,-74.01" — which city stack this row belongs to
   title       text,
   ai_summary  text,                 -- GPT plain-English summary, shown instantly on the card
-  details     jsonb not null default '{}',  -- GPT-picked: pay, duration, category, tags
+  details     jsonb not null default '{}',  -- GPT-picked: plainTitle, pay, duration, category, tags
   raw         jsonb not null,       -- full CTG study object for detail rendering
   fetched_at  timestamptz default now(),
   primary key (city_key, nct_id)
