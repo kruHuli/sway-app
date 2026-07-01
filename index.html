@@ -729,7 +729,7 @@ function openDetail() {
     </div>
     ${tags.length?`<div class="d-section"><div class="d-section-title">Requirements</div><div class="tag-row" style="margin-top:0.3rem">${tags.map(t=>`<span class="tag-pill" style="${pillStyle}">${esc(t)}</span>`).join('')}</div></div>`:''}
     <div class="d-section">
-      <div class="d-section-title">What you'll do</div>
+      <div class="d-section-title">What they'll do to you</div>
       <div class="d-body" id="ai-body"><div class="ai-dots"><span></span><span></span><span></span></div></div>
     </div>
     ${locStr?`<div class="d-section"><div class="d-section-title">Location</div><div class="d-body">📍 ${esc(locStr)}</div></div>`:''}
@@ -839,7 +839,7 @@ function phaseLabel(p) {
 // ── OpenAI plain-language summary
 // Always returns plain English — never the raw academic briefSummary.
 function plainFallback(title) {
-  return `Researchers are studying ${title || 'this topic'}. You'd come in for a few visits and help scientists learn more about health.`;
+  return `Researchers are studying ${title || 'this topic'}. You'd come in for a few visits — likely surveys, simple measurements, maybe a blood draw — to help scientists learn more about health. These studies are typically low-risk for healthy volunteers; tap the link below for the full safety details.`;
 }
 async function getAISummary(title, summary) {
   if (!summary || OPENAI_API_KEY === 'YOUR_OPENAI_API_KEY') return plainFallback(title);
@@ -850,10 +850,10 @@ async function getAISummary(title, summary) {
       body: JSON.stringify({
         model: 'gpt-4o-mini',
         messages: [
-          { role: 'system', content: "Summarize this research study for a healthy volunteer in 2–3 plain English sentences. Say what they'll actually do and why it matters. No jargon. Be warm and direct." },
+          { role: 'system', content: "You explain research studies to healthy volunteers deciding whether to sign up. In 3 short plain-English sentences, answer the two things they most want to know: (1) what will actually happen to them — the concrete procedures (e.g. blood draws, a brain scan, taking a pill, answering surveys, staying overnight); (2) is it safe — name the main discomfort or risk honestly, or say it's low-risk if it is. No jargon, no marketing, no 'this study aims to'. Talk like a straight-talking friend." },
           { role: 'user', content: `Title: ${title}\n\n${summary.slice(0, 1000)}` }
         ],
-        max_tokens: 130, temperature: 0.7,
+        max_tokens: 150, temperature: 0.5,
       }),
     });
     const d = await res.json();
