@@ -6,7 +6,7 @@
   <title>Sway — Research Near You</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
   <style>
     :root {
       --bg: #f3f8f4;
@@ -19,7 +19,7 @@
       --border: rgba(20,60,45,0.10);
       --surface: rgba(20,80,55,0.05);
       --honey: #b5791f;
-      --sans: 'Figtree', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      --sans: 'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
     html, body { height: 100%; overflow: hidden; }
@@ -86,10 +86,11 @@
     /* swipe cards */
     .scard {
       position: absolute; inset: 0;
-      border-radius: 22px; overflow: hidden;
+      border-radius: 30px; overflow: hidden;
       touch-action: none; user-select: none;
       transform-origin: center 110%;
       will-change: transform;
+      box-shadow: 0 26px 50px -16px rgba(18,80,55,0.34), 0 10px 20px -12px rgba(18,80,55,0.24);
     }
     .scard.is-top  { z-index: 10; cursor: grab; }
     .scard.is-top:active { cursor: grabbing; }
@@ -99,43 +100,81 @@
     .scard.fly-out  { transition: transform 0.32s ease-in, opacity 0.32s ease-in; pointer-events: none; }
     .scard.promote  { transition: transform 0.3s ease-out; }
 
-    .scard-inner { background: var(--card-bg); border-radius: 22px; height: 100%; display: flex; flex-direction: column; overflow: hidden; }
-
-    /* editorial "research registry" card */
-    /* clean healthcare card */
-    .ov-match, .ov-skip {
-      position: absolute; top: 1.15rem; z-index: 5;
-      padding: 0.34rem 0.85rem; border-radius: 10px; background: var(--card-bg);
-      font-size: 0.95rem; font-weight: 800; letter-spacing: 0.02em;
-      opacity: 0; pointer-events: none; border: 2.5px solid;
+    .scard-inner {
+      background: linear-gradient(180deg, #ffffff 0%, #f4faf6 100%);
+      border-radius: 30px; height: 100%; display: flex; flex-direction: column; overflow: hidden;
+      box-shadow: inset 0 3px 3px rgba(255,255,255,0.9), inset 0 -22px 34px -26px rgba(18,80,55,0.22);
     }
-    .ov-match { left: 1.15rem; color: var(--green); border-color: var(--green); transform: rotate(-11deg); }
-    .ov-skip  { right: 1.15rem; color: var(--red);  border-color: var(--red);  transform: rotate(11deg); }
 
-    .scard-body { flex: 1; padding: 1.3rem 1.3rem 1.15rem; display: flex; flex-direction: column; gap: 0.5rem; min-height: 0; overflow: hidden; }
-    .scard-eyebrow { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
+    /* claymorphism (green) card */
+    .ov-match, .ov-skip {
+      position: absolute; top: 1.2rem; z-index: 5;
+      padding: 0.4rem 0.95rem; border-radius: 16px; background: var(--card-bg);
+      font-size: 0.98rem; font-weight: 900; letter-spacing: 0.01em;
+      opacity: 0; pointer-events: none; border: 3px solid;
+      box-shadow: 0 8px 18px -6px rgba(18,80,55,0.3);
+    }
+    .ov-match { left: 1.2rem; color: var(--green); border-color: var(--green); transform: rotate(-10deg); }
+    .ov-skip  { right: 1.2rem; color: var(--red);  border-color: var(--red);  transform: rotate(10deg); }
+
+    .scard-body { flex: 1; padding: 1.35rem 1.3rem 1.25rem; display: flex; flex-direction: column; justify-content: safe center; gap: 0.7rem; min-height: 0; overflow: hidden; }
+    .scard-top { display: flex; align-items: center; gap: 0.65rem; }
+    .clay-badge {
+      width: 46px; height: 46px; flex-shrink: 0; border-radius: 15px;
+      display: flex; align-items: center; justify-content: center; color: #fff;
+      background: var(--cat, var(--accent));
+      background: linear-gradient(140deg, color-mix(in srgb, var(--cat, var(--accent)) 62%, #fff), var(--cat, var(--accent)));
+      box-shadow: 0 9px 16px -6px color-mix(in srgb, var(--cat, var(--accent)) 55%, transparent), inset 0 2px 2px rgba(255,255,255,0.55);
+      animation: clayfloat 4.5s ease-in-out infinite;
+    }
+    .clay-badge svg { width: 24px; height: 24px; }
     .scard-cat {
-      display: flex; align-items: center; gap: 0.44rem; min-width: 0;
-      font-size: 0.66rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+      flex: 1; min-width: 0; font-size: 0.68rem; font-weight: 800; letter-spacing: 0.09em; text-transform: uppercase;
       color: var(--cat, var(--accent)); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     }
-    .scard-cat::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
-    .scard-nct { font-size: 0.62rem; font-weight: 600; letter-spacing: 0.02em; color: var(--sub); opacity: 0.7; flex-shrink: 0; font-variant-numeric: tabular-nums; }
-    .scard-title { font-size: 1.32rem; line-height: 1.24; font-weight: 700; letter-spacing: -0.015em; color: var(--text); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-    .scard-meta { font-size: 0.78rem; font-weight: 600; color: var(--sub); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .scard-section { display: flex; flex-direction: column; gap: 0.3rem; margin-top: 0.35rem; }
-    .scard-section-label { font-size: 0.63rem; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; color: #0b6e4b; }
-    .scard-list { list-style: none; display: flex; flex-direction: column; gap: 0.28rem; }
-    .scard-list li { position: relative; padding-left: 1rem; font-size: 0.86rem; line-height: 1.35; color: var(--text); }
-    .scard-list li::before { content: ''; position: absolute; left: 0.1rem; top: 0.5em; width: 5px; height: 5px; border-radius: 50%; background: var(--cat, var(--accent)); opacity: 0.55; }
-    .scard-strip { display: flex; margin-top: auto; padding-top: 0.85rem; border-top: 1px solid var(--border); }
-    .sstat { flex: 1; display: flex; flex-direction: column; gap: 0.15rem; padding: 0 0.35rem; }
-    .sstat + .sstat { border-left: 1px solid var(--border); }
-    .sstat-label { font-size: 0.56rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--sub); }
-    .sstat-value { font-size: 0.92rem; font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; }
+    .scard-nct { font-size: 0.62rem; font-weight: 700; color: var(--sub); opacity: 0.65; flex-shrink: 0; font-variant-numeric: tabular-nums; }
+    .scard-title { font-size: 1.42rem; line-height: 1.18; font-weight: 900; letter-spacing: -0.02em; color: var(--text); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+    .scard-meta { font-size: 0.8rem; font-weight: 700; color: var(--sub); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .scard-section { display: flex; flex-direction: column; gap: 0.35rem; }
+    .scard-section-label { font-size: 0.64rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #0b6e4b; }
+    .clay-tray {
+      background: #eef6f0; border-radius: 20px; padding: 0.75rem 0.9rem;
+      box-shadow: inset 2px 3px 6px rgba(18,80,55,0.11), inset -2px -2px 5px rgba(255,255,255,0.85);
+    }
+    .scard-list { list-style: none; display: flex; flex-direction: column; gap: 0.32rem; }
+    .scard-list li { position: relative; padding-left: 1.05rem; font-size: 0.87rem; font-weight: 600; line-height: 1.35; color: var(--text); }
+    .scard-list li::before { content: ''; position: absolute; left: 0; top: 0.42em; width: 7px; height: 7px; border-radius: 50%; background: var(--cat, var(--accent)); box-shadow: inset 0 -1px 1px rgba(0,0,0,0.15); }
+    .clay-pills { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+    .clay-pill {
+      font-size: 0.75rem; font-weight: 800; padding: 0.34rem 0.7rem; border-radius: 999px; white-space: nowrap;
+      color: var(--cat, var(--accent)); background: #eef6f0;
+      color: color-mix(in srgb, var(--cat, var(--accent)) 78%, #000);
+      background: color-mix(in srgb, var(--cat, var(--accent)) 15%, #fff);
+      box-shadow: 0 3px 6px -2px color-mix(in srgb, var(--cat, var(--accent)) 30%, transparent), inset 0 1px 1px rgba(255,255,255,0.75);
+    }
+    .scard-strip { display: flex; gap: 0.5rem; margin-top: 0.15rem; }
+    .sstat {
+      flex: 1; display: flex; flex-direction: column; align-items: center; gap: 0.12rem; padding: 0.5rem 0.3rem;
+      background: #fff; border-radius: 16px;
+      box-shadow: 0 6px 12px -6px rgba(18,80,55,0.22), inset 0 1px 1px rgba(255,255,255,0.9), inset 0 0 0 1px rgba(18,80,55,0.05);
+    }
+    .sstat-label { font-size: 0.55rem; font-weight: 800; letter-spacing: 0.07em; text-transform: uppercase; color: var(--sub); }
+    .sstat-value { font-size: 0.94rem; font-weight: 900; color: var(--text); font-variant-numeric: tabular-nums; }
     .sv-pay { color: var(--honey); }
     .tag-row { display: flex; gap: 0.4rem; flex-wrap: wrap; }
-    .tag-pill { font-size: 0.72rem; font-weight: 600; padding: 0.25rem 0.6rem; border-radius: 8px; white-space: nowrap; }
+    .tag-pill { font-size: 0.75rem; font-weight: 700; padding: 0.3rem 0.65rem; border-radius: 999px; white-space: nowrap; }
+
+    /* subtle & alive: stagger the top card's content in */
+    @keyframes claypop { from { opacity: 0; transform: translateY(10px) scale(0.98); } to { opacity: 1; transform: none; } }
+    @keyframes clayfloat { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+    .scard.is-top .scard-body > * { animation: claypop 0.45s cubic-bezier(0.22,1,0.36,1) backwards; }
+    .scard.is-top .scard-body > *:nth-child(2) { animation-delay: 0.05s; }
+    .scard.is-top .scard-body > *:nth-child(3) { animation-delay: 0.1s; }
+    .scard.is-top .scard-body > *:nth-child(4) { animation-delay: 0.15s; }
+    .scard.is-top .scard-body > *:nth-child(5) { animation-delay: 0.2s; }
+    @media (prefers-reduced-motion: reduce) {
+      .scard.is-top .scard-body > *, .clay-badge { animation: none; }
+    }
 
     /* action buttons */
     .action-row {
@@ -338,11 +377,26 @@ function lsSet(key, data) {
   try { localStorage.setItem(`sway_${LS_VER}_${key}`, JSON.stringify({ studies: data, ts: Date.now() })); } catch {}
 }
 
-// Solid accent per category — small mark (diamond + eyebrow), not a full block
+// Solid accent per category — badge gradient + accents
 const CAT_COLOR = {
   BEHAVIORAL:'#7c5cd6', DRUG:'#2f72c9', BIOLOGICAL:'#157f4e', DEVICE:'#4f6478',
   DIETARY_SUPPLEMENT:'#0e8a63', PROCEDURE:'#6d45c4', GENETIC:'#c23e86', OTHER:'#12805a',
 };
+
+// Inline SVG category icons (no emoji — skill: no emoji as structural icons)
+const CAT_ICON_PATH = {
+  DRUG:'<path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z"/><path d="m8.5 8.5 7 7"/>',
+  DIETARY_SUPPLEMENT:'<path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.5 19 2c1 2 2 4.2 2 8 0 5.5-4.8 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6"/>',
+  BEHAVIORAL:'<path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"/>',
+  BIOLOGICAL:'<path d="M10 2v7.31"/><path d="M14 9.3V2"/><path d="M8.5 2h7"/><path d="M14 9.3a6.5 6.5 0 1 1-4 0"/><path d="M5.58 16.5h12.85"/>',
+  DEVICE:'<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>',
+  PROCEDURE:'<path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/><path d="M3.2 12H9l.5-1 2 4.5 2-7 1.5 3.5h5.3"/>',
+  GENETIC:'<circle cx="12" cy="12" r="3"/><line x1="3" y1="12" x2="9" y2="12"/><line x1="15" y1="12" x2="21" y2="12"/>',
+  OTHER:'<circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>',
+};
+function catIcon(t) {
+  return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${CAT_ICON_PATH[t] || CAT_ICON_PATH.OTHER}</svg>`;
+}
 
 const TAG_PILL = {
   BEHAVIORAL:         'background:rgba(124,111,247,0.12);border:1px solid rgba(124,111,247,0.35);color:#6d4ad8',
@@ -550,7 +604,8 @@ function buildCard(study, rank) {
       <div class="ov-match">MATCH ✓</div>
       <div class="ov-skip">SKIP ✗</div>
       <div class="scard-body" style="--cat:${catColor}">
-        <div class="scard-eyebrow">
+        <div class="scard-top">
+          <div class="clay-badge">${catIcon(ivType)}</div>
           <span class="scard-cat">${esc(cat)}</span>
           ${nctId ? `<span class="scard-nct">${esc(nctId)}</span>` : ''}
         </div>
@@ -558,11 +613,11 @@ function buildCard(study, rank) {
         ${institution || distStr ? `<div class="scard-meta">${esc([institution, distStr].filter(Boolean).join(' · '))}</div>` : ''}
         <div class="scard-section">
           <div class="scard-section-label">What you'll do</div>
-          <ul class="scard-list js-whatdo">${whatDoItems(enr.aiSummary)}</ul>
+          <div class="clay-tray"><ul class="scard-list js-whatdo">${whatDoItems(enr.aiSummary)}</ul></div>
         </div>
         ${tags.length ? `<div class="scard-section">
           <div class="scard-section-label">Good fit if</div>
-          <ul class="scard-list">${tags.slice(0,4).map(t=>`<li>${esc(t)}</li>`).join('')}</ul>
+          <div class="clay-pills">${tags.slice(0,4).map(t=>`<span class="clay-pill">${esc(t)}</span>`).join('')}</div>
         </div>` : ''}
         <div class="scard-strip">
           <div class="sstat"><span class="sstat-label">Time</span><span class="sstat-value">${esc(duration || '—')}</span></div>
