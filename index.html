@@ -4,7 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Sway — Research Near You</title>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <style>
     :root {
       --bg: #f3f8f4;
@@ -289,10 +288,20 @@
 const OPENAI_API_KEY   = 'YOUR_OPENAI_API_KEY';   // ponytail: replace — fine for local/demo
 const SUPABASE_URL     = 'YOUR_SUPABASE_URL';
 const SUPABASE_ANON    = 'YOUR_SUPABASE_ANON_KEY';
-const db = (SUPABASE_URL !== 'YOUR_SUPABASE_URL')
-  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON)
-  : null;
-const dbRun = q => Promise.resolve(q).catch(() => {});
+const SUPA_ON = SUPABASE_URL !== 'YOUR_SUPABASE_URL';
+// Raw REST write — replaces @supabase/supabase-js just for these two calls.
+// upsert=true adds merge-duplicates (studies cache); omit it for plain inserts (likes).
+function sbWrite(path, body, upsert) {
+  return fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+    method: 'POST',
+    headers: {
+      apikey: SUPABASE_ANON, Authorization: `Bearer ${SUPABASE_ANON}`,
+      'Content-Type': 'application/json',
+      ...(upsert && { Prefer: 'resolution=merge-duplicates' }),
+    },
+    body: JSON.stringify(body),
+  }).catch(() => {});
+}
 
 // Stable anonymous session ID (survives tab reloads, not tied to an account)
 const sessionId = localStorage.getItem('sway_session') || (id => (localStorage.setItem('sway_session', id), id))(crypto.randomUUID());
@@ -305,7 +314,6 @@ const CITIES = {
   'Boston':        { lat: 42.3601, lon: -71.0589 },
   'Seattle':       { lat: 47.6062, lon: -122.3321 },
 };
-const studyCache = {};
 
 function lsGet(key) {
   try {
@@ -321,16 +329,14 @@ function lsSet(key, data) {
   try { localStorage.setItem(`sway_${key}`, JSON.stringify({ studies: data, ts: Date.now() })); } catch {}
 }
 
-// ── Gradients per intervention type
+// ── Gradients per intervention type. Greens (BIOLOGICAL/DIETARY/OTHER) fall through
+// to GRAD_DEFAULT. ponytail: full CAT_COLOR solid-color collapse lands with card redesign.
 const GRAD = {
-  BEHAVIORAL:         'linear-gradient(140deg,#a78bfa,#7c6ff7)',
-  DRUG:               'linear-gradient(140deg,#5e9bf0,#3b7dd8)',
-  BIOLOGICAL:         'linear-gradient(140deg,#34c98a,#15915b)',
-  DEVICE:             'linear-gradient(140deg,#7c93b0,#516983)',
-  DIETARY_SUPPLEMENT: 'linear-gradient(140deg,#34d399,#0f9d6b)',
-  PROCEDURE:          'linear-gradient(140deg,#a78bfa,#7c5cd6)',
-  GENETIC:            'linear-gradient(140deg,#f472b6,#db5a9d)',
-  OTHER:              'linear-gradient(140deg,#5fc99a,#2f9e74)',
+  BEHAVIORAL:  'linear-gradient(140deg,#a78bfa,#7c6ff7)',
+  PROCEDURE:   'linear-gradient(140deg,#a78bfa,#7c5cd6)',
+  DRUG:        'linear-gradient(140deg,#5e9bf0,#3b7dd8)',
+  DEVICE:      'linear-gradient(140deg,#7c93b0,#516983)',
+  GENETIC:     'linear-gradient(140deg,#f472b6,#db5a9d)',
 };
 const GRAD_DEFAULT = 'linear-gradient(140deg,#4cbf95,#1f9d6b)';
 
@@ -430,36 +436,31 @@ function readStudies(cityKey) {
 }
 function writeStudies(cityKey, list) {
   const rows = list.map(s => studyToRow(s, cityKey)).filter(r => r.nct_id);
-  if (!rows.length || !db) return;
-  dbRun(db.from('studies').upsert(rows, { onConflict: 'city_key,nct_id' }));
+  if (rows.length && SUPA_ON) sbWrite('studies?on_conflict=city_key,nct_id', rows, true);
 }
 
 // ── API — healthy volunteer studies, no condition filter
 async function loadStudies() {
   const stack = document.getElementById('card-stack');
   const cacheKey = `${lat.toFixed(2)},${lon.toFixed(2)}`;
-  if (studyCache[cacheKey]) {
-    studies = studyCache[cacheKey]; idx = 0; renderStack(); return;
-  }
   const lsCached = lsGet(cacheKey);
   if (lsCached) {
-    studies = lsCached; studyCache[cacheKey] = studies; idx = 0; renderStack(); return;
+    studies = lsCached; idx = 0; renderStack(); return;
   }
   stack.innerHTML = '<div class="load-state"><div class="spinner"></div>Finding studies near you…</div>';
 
   // Check Supabase (raw fetch with no-store so browser never caches stale enriched data)
-  if (SUPABASE_URL !== 'YOUR_SUPABASE_URL') {
+  if (SUPA_ON) {
     try {
       const r = await readStudies(cacheKey);
       const rows = await r.json();
       if (rows.length && Date.now() - new Date(rows[0].fetched_at) < 86400000) {
-        studies = rowsToStudies(rows); studyCache[cacheKey] = studies; lsSet(cacheKey, studies); idx = 0; renderStack(); return;
+        studies = rowsToStudies(rows); lsSet(cacheKey, studies); idx = 0; renderStack(); return;
       }
     } catch {}
   }
 
   studies = await fetchCTGStudies(lat, lon);
-  studyCache[cacheKey] = studies;
   lsSet(cacheKey, studies);
   writeStudies(cacheKey, studies);
   idx = 0;
@@ -636,11 +637,11 @@ function doSwipe(dir) {
       dist: top.dataset.dist,
     };
     liked.push(likedStudy);
-    if (db) dbRun(db.from('liked_studies').insert({
+    if (SUPA_ON) sbWrite('liked_studies', {
       session_id: sessionId, nct_id: nctId,
       title: likedStudy.title, institution: likedStudy.institution,
       location: likedStudy.loc, distance: likedStudy.dist,
-    }));
+    });
     top.classList.add('fly-out');
     top.style.transform = 'translate(160%,-5px) rotate(28deg)';
   } else {
@@ -776,17 +777,15 @@ function resetApp() {
 async function prefetchCity(name) {
   const c = CITIES[name];
   const key = `${c.lat.toFixed(2)},${c.lon.toFixed(2)}`;
-  if (studyCache[key]) return;
-  const lsPre = lsGet(key);
-  if (lsPre) { studyCache[key] = lsPre; return; }
+  if (lsGet(key)) return;   // already cached this session (localStorage is the cache)
 
   // 1. Try Supabase (raw fetch, no-store to bypass browser HTTP cache)
-  if (SUPABASE_URL !== 'YOUR_SUPABASE_URL') {
+  if (SUPA_ON) {
     try {
       const r = await readStudies(key);
       const rows = await r.json();
       if (rows.length && Date.now() - new Date(rows[0].fetched_at) < 86400000) {
-        studyCache[key] = rowsToStudies(rows); lsSet(key, studyCache[key]); return;
+        lsSet(key, rowsToStudies(rows)); return;
       }
     } catch {}
   }
@@ -794,7 +793,6 @@ async function prefetchCity(name) {
   // 2. Fetch from CTG
   try {
     const result = await fetchCTGStudies(c.lat, c.lon, 20);
-    studyCache[key] = result;
     lsSet(key, result);
     // 3. Save to Supabase
     writeStudies(key, result);
